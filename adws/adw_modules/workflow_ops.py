@@ -114,22 +114,35 @@ def classify_issue(
     
     # Extract the classification from the response
     output = response.output.strip()
-    
+
     # Look for the classification pattern in the output
     # Claude might add explanation, so we need to extract just the command
-    classification_match = re.search(r'(/chore|/bug|/feature|0)', output)
-    
+    classification_match = re.search(r'(/chore|/bug|/feature)\b', output)
+
     if classification_match:
         issue_command = classification_match.group(1)
+    elif re.search(r'\b0\b', output) and not re.search(r'(?:chore|bug|feature)', output, re.IGNORECASE):
+        # Only treat as "0" (no match) if there's no keyword hint
+        return None, f"No command selected: {response.output}"
     else:
-        issue_command = output
-    
+        # Fallback: look for keywords in the output (case-insensitive)
+        output_lower = output.lower()
+        if 'bug' in output_lower or 'fix' in output_lower or 'error' in output_lower:
+            issue_command = '/bug'
+        elif 'feature' in output_lower or 'enhancement' in output_lower or 'add' in output_lower or 'new' in output_lower:
+            issue_command = '/feature'
+        elif 'chore' in output_lower or 'refactor' in output_lower or 'maintenance' in output_lower or 'documentation' in output_lower:
+            issue_command = '/chore'
+        else:
+            return None, f"Invalid command selected: {response.output}"
+
     if issue_command == "0":
         return None, f"No command selected: {response.output}"
-    
+
     if issue_command not in ["/chore", "/bug", "/feature"]:
         return None, f"Invalid command selected: {response.output}"
-    
+
+    logger.info(f"Classified issue as: {issue_command}")
     return issue_command, None  # type: ignore
 
 
