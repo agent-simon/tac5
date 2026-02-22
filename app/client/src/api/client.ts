@@ -56,6 +56,17 @@ export const api = {
     });
   },
   
+  // Generate a natural language query based on current schema
+  async generateQuery(): Promise<GenerateQueryResponse> {
+    return apiRequest<GenerateQueryResponse>('/generate-query', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
+    });
+  },
+
   // Get database schema
   async getSchema(): Promise<DatabaseSchemaResponse> {
     return apiRequest<DatabaseSchemaResponse>('/schema');

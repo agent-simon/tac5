@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeQueryInput();
   initializeFileUpload();
   initializeModal();
+  initializeGenerateQueryButton();
   loadDatabaseSchema();
   initializeFavorites();
 });
@@ -347,6 +348,33 @@ function initializeModal() {
       const sampleType = (e.currentTarget as HTMLElement).dataset.sample;
       await loadSampleData(sampleType!);
     });
+  });
+}
+
+// Generate Query Button
+function initializeGenerateQueryButton() {
+  const generateQueryButton = document.getElementById('generate-query-button') as HTMLButtonElement;
+  const queryInput = document.getElementById('query-input') as HTMLTextAreaElement;
+
+  generateQueryButton.addEventListener('click', async () => {
+    generateQueryButton.disabled = true;
+    generateQueryButton.textContent = 'Generating...';
+
+    try {
+      const response = await api.generateQuery();
+      if (response.error) {
+        displayError(response.error);
+      } else if (response.query) {
+        queryInput.value = response.query;
+      } else {
+        displayError('No query was generated. Please try again.');
+      }
+    } catch (error) {
+      displayError(error instanceof Error ? error.message : 'Failed to generate query');
+    } finally {
+      generateQueryButton.disabled = false;
+      generateQueryButton.textContent = 'Generate Query';
+    }
   });
 }
 

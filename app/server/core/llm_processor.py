@@ -141,6 +141,111 @@ def format_schema_for_prompt(schema_info: Dict[str, Any]) -> str:
     
     return "\n".join(lines)
 
+def _generate_nl_query_with_openai(schema_info: Dict[str, Any]) -> str:
+    """
+    Generate a natural language query using OpenAI API
+    """
+    try:
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable not set")
+
+        client = OpenAI(api_key=api_key)
+
+        schema_description = format_schema_for_prompt(schema_info)
+
+        prompt = f"""Given the following database schema:
+
+{schema_description}
+
+Generate a single interesting, specific natural language question that a data analyst would ask about this data.
+
+Rules:
+- Return ONLY the question in plain English, no SQL, no preamble, no explanation
+- Make it specific and insightful (not generic like "show all rows")
+- Vary the type of question: aggregations, filters, top-N, comparisons, group-bys
+- The question should be answerable using the available schema
+
+Question:"""
+
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": "You are a data analyst generating insightful questions about datasets."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.8,
+            max_tokens=100
+        )
+
+        return response.choices[0].message.content.strip()
+
+    except Exception as e:
+        raise Exception(f"Error generating natural language query with OpenAI: {str(e)}")
+
+
+def _generate_nl_query_with_anthropic(schema_info: Dict[str, Any]) -> str:
+    """
+    Generate a natural language query using Anthropic API
+    """
+    try:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY environment variable not set")
+
+        client = Anthropic(api_key=api_key)
+
+        schema_description = format_schema_for_prompt(schema_info)
+
+        prompt = f"""Given the following database schema:
+
+{schema_description}
+
+Generate a single interesting, specific natural language question that a data analyst would ask about this data.
+
+Rules:
+- Return ONLY the question in plain English, no SQL, no preamble, no explanation
+- Make it specific and insightful (not generic like "show all rows")
+- Vary the type of question: aggregations, filters, top-N, comparisons, group-bys
+- The question should be answerable using the available schema
+
+Question:"""
+
+        response = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=100,
+            temperature=0.8,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        return response.content[0].text.strip()
+
+    except Exception as e:
+        raise Exception(f"Error generating natural language query with Anthropic: {str(e)}")
+
+
+def generate_natural_language_query(schema_info: Dict[str, Any]) -> str:
+    """
+    Generate a natural language query using the available LLM provider.
+    Priority: OpenAI API key → Anthropic API key
+    """
+    try:
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+
+        if openai_key:
+            return _generate_nl_query_with_openai(schema_info)
+        elif anthropic_key:
+            return _generate_nl_query_with_anthropic(schema_info)
+        else:
+            raise ValueError("No LLM API key available. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.")
+
+    except Exception as e:
+        raise Exception(f"Error generating natural language query: {str(e)}")
+
+
 def generate_sql(request: QueryRequest, schema_info: Dict[str, Any]) -> str:
     """
     Route to appropriate LLM provider based on API key availability and request preference.

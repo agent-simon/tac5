@@ -114,15 +114,33 @@ def classify_issue(
     
     # Extract the classification from the response
     output = response.output.strip()
+<<<<<<< feat-issue-2-adw-25f0fedc-add-nl-query-button
+
+    # Look for the classification keyword in the output
+    # The classify_issue command responds with just: chore, bug, feature, or none
+    # Use line-start anchor to avoid matching inside other text
+    classification_match = re.search(r'^(chore|bug|feature|none)$', output, re.MULTILINE | re.IGNORECASE)
+=======
     
     # Look for the classification pattern in the output
     # Claude might add explanation, so we need to extract just the command
     # Match both slash-prefixed (/feature) and bare words (feature)
     classification_match = re.search(r'(/chore|/bug|/feature|\bchore\b|\bbug\b|\bfeature\b|0)', output)
+>>>>>>> main
 
     if classification_match:
-        issue_command = classification_match.group(1)
+        issue_command = classification_match.group(1).lower()
     else:
+<<<<<<< feat-issue-2-adw-25f0fedc-add-nl-query-button
+        return None, f"Invalid classification response: {response.output}"
+
+    if issue_command == "none":
+        return None, f"No command selected: {response.output}"
+
+    # Map classification word to slash command
+    command_map = {"chore": "/chore", "bug": "/bug", "feature": "/feature"}
+    return command_map[issue_command], None  # type: ignore
+=======
         issue_command = output
 
     if issue_command == "0":
@@ -136,6 +154,7 @@ def classify_issue(
         return None, f"Invalid command selected: {response.output}"
 
     return issue_command, None  # type: ignore
+>>>>>>> main
 
 
 
