@@ -15,14 +15,12 @@
 - Run `./scripts/reset_db.sh` to setup the database from the backup.db file
 - On a background process, run `./scripts/start.sh` with 'nohup' or a 'subshell' to start the server so you don't get stuck
 
-## Report
-- Output the work you've just done in a concise bullet point list.
-- Instruct the user to fill out the root level ./.env based on .env.sample. 
-- If `./app/server/.env` does not exist, instruct the user to fill out `./app/server/.env` based on `./app/server/.env.sample`
-- If `./env` does not exist, instruct the user to fill out `./env` based on `./env.sample`
-- Mention the url of the frontend application we can visit based on `scripts/start.sh`
-- Mention: 'To setup your AFK Agent, be sure to update the remote repo url and push to a new repo so you have access to git issues and git prs:
-  ```
-  git remote add origin <your-new-repo-url>
-  git push -u origin main
-  ```'
+### Report
+**Setup complete. Summary of what was done:**
+- [bullet list of completed steps]
+
+**Action required from you:**
+- Fill out `.env` based on `.env.sample`
+- [etc.]
+
+**To start developing:** visit [URL from scripts/start.sh]

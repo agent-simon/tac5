@@ -117,19 +117,24 @@ def classify_issue(
     
     # Look for the classification pattern in the output
     # Claude might add explanation, so we need to extract just the command
-    classification_match = re.search(r'(/chore|/bug|/feature|0)', output)
-    
+    # Match both slash-prefixed (/feature) and bare words (feature)
+    classification_match = re.search(r'(/chore|/bug|/feature|\bchore\b|\bbug\b|\bfeature\b|0)', output)
+
     if classification_match:
         issue_command = classification_match.group(1)
     else:
         issue_command = output
-    
+
     if issue_command == "0":
         return None, f"No command selected: {response.output}"
-    
+
+    # Normalize bare words to slash-prefixed commands
+    if issue_command in ["chore", "bug", "feature"]:
+        issue_command = f"/{issue_command}"
+
     if issue_command not in ["/chore", "/bug", "/feature"]:
         return None, f"Invalid command selected: {response.output}"
-    
+
     return issue_command, None  # type: ignore
 
 
