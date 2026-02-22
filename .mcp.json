@@ -7,7 +7,9 @@
         "--isolated",
         "--headless",
         "--viewport-size",
-        "1920,1080"
+        "1920,1080",
+        "--executable-path",
+        "/usr/bin/chromium"
       ]
     }
   }
