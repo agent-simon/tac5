@@ -230,7 +230,23 @@ def prompt_claude_code(request: AgentPromptRequest) -> AgentPromptResponse:
                     output=raw_output, success=True, session_id=None
                 )
         else:
-            error_msg = f"Claude Code error: {result.stderr}"
+            # Try to parse JSONL output for error details (e.g., billing errors)
+            # since stderr may be empty while the error is in the result message
+            try:
+                messages, result_message = parse_jsonl_output(request.output_file)
+                if result_message:
+                    session_id = result_message.get("session_id")
+                    result_text = result_message.get("result", "")
+                    error_field = result_message.get("error", "")
+                    error_detail = result_text or error_field or result.stderr or "Unknown error"
+                    error_msg = f"Claude Code error: {error_detail}"
+                    print(error_msg, file=sys.stderr)
+                    return AgentPromptResponse(output=error_msg, success=False, session_id=session_id)
+            except Exception:
+                pass  # Fall through to stderr-based error
+
+            stderr_text = result.stderr.strip() if result.stderr else "Unknown error (no stderr output)"
+            error_msg = f"Claude Code error: {stderr_text}"
             print(error_msg, file=sys.stderr)
             return AgentPromptResponse(output=error_msg, success=False, session_id=None)
 

@@ -70,6 +70,11 @@ class InsightsResponse(BaseModel):
     generated_at: datetime
     error: Optional[str] = None
 
+# Suggest Query Models
+class SuggestQueryResponse(BaseModel):
+    query: str
+    error: Optional[str] = None
+
 # Health Check Models
 class HealthCheckRequest(BaseModel):
     pass

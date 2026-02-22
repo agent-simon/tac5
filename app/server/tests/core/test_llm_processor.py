@@ -2,10 +2,11 @@ import pytest
 import os
 from unittest.mock import patch, MagicMock
 from core.llm_processor import (
-    generate_sql_with_openai, 
-    generate_sql_with_anthropic, 
+    generate_sql_with_openai,
+    generate_sql_with_anthropic,
     format_schema_for_prompt,
-    generate_sql
+    generate_sql,
+    generate_suggested_query
 )
 from core.data_models import QueryRequest
 
@@ -280,8 +281,86 @@ class TestLLMProcessor:
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'openai-key'}, clear=True):
             request = QueryRequest(query="Show sales data", llm_provider="anthropic")
             schema_info = {'tables': {}}
-            
+
             result = generate_sql(request, schema_info)
-            
+
             assert result == "SELECT * FROM sales"
             mock_openai_func.assert_called_once_with("Show sales data", schema_info)
+
+
+class TestGenerateSuggestedQuery:
+
+    def test_empty_schema_returns_default(self):
+        schema_info = {'tables': {}}
+        result = generate_suggested_query(schema_info)
+        assert result == "What are all the records in my table?"
+
+    def test_no_tables_key_returns_default(self):
+        schema_info = {}
+        result = generate_suggested_query(schema_info)
+        assert result == "What are all the records in my table?"
+
+    @patch('core.llm_processor.OpenAI')
+    def test_with_schema_uses_openai_when_key_available(self, mock_openai_class):
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = "Which users signed up in the last 30 days?"
+        mock_client.chat.completions.create.return_value = mock_response
+
+        schema_info = {
+            'tables': {
+                'users': {
+                    'columns': {'id': 'INTEGER', 'name': 'TEXT', 'signup_date': 'TEXT'},
+                    'row_count': 100
+                }
+            }
+        }
+
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}, clear=True):
+            result = generate_suggested_query(schema_info)
+
+        assert result == "Which users signed up in the last 30 days?"
+        mock_client.chat.completions.create.assert_called_once()
+        call_args = mock_client.chat.completions.create.call_args
+        assert call_args[1]['temperature'] == 0.8
+
+    @patch('core.llm_processor.Anthropic')
+    def test_with_schema_uses_anthropic_as_fallback(self, mock_anthropic_class):
+        mock_client = MagicMock()
+        mock_anthropic_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.content[0].text = "What are the top 5 most expensive products?"
+        mock_client.messages.create.return_value = mock_response
+
+        schema_info = {
+            'tables': {
+                'products': {
+                    'columns': {'id': 'INTEGER', 'name': 'TEXT', 'price': 'REAL'},
+                    'row_count': 50
+                }
+            }
+        }
+
+        with patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'test-key'}, clear=True):
+            result = generate_suggested_query(schema_info)
+
+        assert result == "What are the top 5 most expensive products?"
+        mock_client.messages.create.assert_called_once()
+
+    def test_no_api_keys_returns_default(self):
+        schema_info = {
+            'tables': {
+                'users': {
+                    'columns': {'id': 'INTEGER', 'name': 'TEXT'},
+                    'row_count': 10
+                }
+            }
+        }
+
+        with patch.dict(os.environ, {}, clear=True):
+            result = generate_suggested_query(schema_info)
+
+        assert result == "What are all the records in my table?"

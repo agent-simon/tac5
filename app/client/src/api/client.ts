@@ -75,5 +75,10 @@ export const api = {
   // Health check
   async healthCheck(): Promise<HealthCheckResponse> {
     return apiRequest<HealthCheckResponse>('/health');
+  },
+
+  // Suggest query
+  async suggestQuery(): Promise<SuggestQueryResponse> {
+    return apiRequest<SuggestQueryResponse>('/suggest-query');
   }
 };

@@ -141,6 +141,53 @@ def format_schema_for_prompt(schema_info: Dict[str, Any]) -> str:
     
     return "\n".join(lines)
 
+def generate_suggested_query(schema_info: Dict[str, Any]) -> str:
+    """
+    Generate an interesting natural language query suggestion based on the database schema.
+    Uses the same provider priority as generate_sql: OpenAI first, then Anthropic.
+    Returns a default placeholder if no schema tables exist.
+    """
+    if not schema_info.get("tables"):
+        return "What are all the records in my table?"
+
+    schema_string = format_schema_for_prompt(schema_info)
+
+    prompt = f"""You are a data analyst. Given this database schema, generate ONE interesting natural language question a user might want to ask about this data. Return ONLY the question, nothing else.
+
+{schema_string}
+
+Be creative and vary the type of question (filtering, aggregation, ranking, comparison). Make it specific to the actual column names and data."""
+
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+
+    if openai_key:
+        client = OpenAI(api_key=openai_key)
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": "You are a data analyst. Generate natural language questions about data."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.8,
+            max_tokens=100
+        )
+        return response.choices[0].message.content.strip()
+    elif anthropic_key:
+        client = Anthropic(api_key=anthropic_key)
+        response = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=100,
+            temperature=0.8,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.content[0].text.strip()
+
+    return "What are all the records in my table?"
+
+
 def generate_sql(request: QueryRequest, schema_info: Dict[str, Any]) -> str:
     """
     Route to appropriate LLM provider based on API key availability and request preference.

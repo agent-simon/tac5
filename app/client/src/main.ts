@@ -2,14 +2,44 @@ import './style.css'
 import { api } from './api/client'
 
 // Global state
+let isQueryRunning = false;
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
   initializeQueryInput();
   initializeFileUpload();
   initializeModal();
+  initializeRandomQueryButton();
   loadDatabaseSchema();
 });
+
+// Random Query Button Functionality
+function initializeRandomQueryButton() {
+  const randomQueryButton = document.getElementById('random-query-button') as HTMLButtonElement;
+  const queryInput = document.getElementById('query-input') as HTMLTextAreaElement;
+
+  if (!randomQueryButton || !queryInput) return;
+
+  randomQueryButton.addEventListener('click', async () => {
+    if (isQueryRunning) return;
+    const originalText = randomQueryButton.textContent;
+    randomQueryButton.textContent = 'Generating...';
+    randomQueryButton.disabled = true;
+
+    try {
+      const response = await api.suggestQuery();
+      if (response.query) {
+        queryInput.value = response.query;
+        queryInput.focus();
+      }
+    } catch (error) {
+      console.error('Failed to generate query suggestion:', error);
+    } finally {
+      randomQueryButton.textContent = originalText;
+      randomQueryButton.disabled = false;
+    }
+  });
+}
 
 // Query Input Functionality
 function initializeQueryInput() {
@@ -17,20 +47,25 @@ function initializeQueryInput() {
   const queryButton = document.getElementById('query-button') as HTMLButtonElement;
   
   queryButton.addEventListener('click', async () => {
+    if (isQueryRunning) return;
     const query = queryInput.value.trim();
     if (!query) return;
-    
+
+    isQueryRunning = true;
+    queryInput.disabled = true;
     queryButton.disabled = true;
     queryButton.innerHTML = '<span class="loading"></span>';
-    
+    const randomQueryButton = document.getElementById('random-query-button') as HTMLButtonElement;
+    if (randomQueryButton) randomQueryButton.disabled = true;
+
     try {
       const response = await api.processQuery({
         query,
         llm_provider: 'openai'  // Default to OpenAI
       });
-      
+
       displayResults(response, query);
-      
+
       // Clear the input field on success
       queryInput.value = '';
     } catch (error) {
@@ -38,12 +73,17 @@ function initializeQueryInput() {
     } finally {
       queryButton.disabled = false;
       queryButton.textContent = 'Query';
+      queryInput.disabled = false;
+      if (randomQueryButton) randomQueryButton.disabled = false;
+      isQueryRunning = false;
+      queryInput.focus();
     }
   });
   
   // Allow Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux) to submit
   queryInput.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      if (isQueryRunning) return;
       queryButton.click();
     }
   });

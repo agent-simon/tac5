@@ -70,6 +70,12 @@ interface InsightsResponse {
   error?: string;
 }
 
+// Suggest Query Types
+interface SuggestQueryResponse {
+  query: string;
+  error?: string;
+}
+
 // Health Check Types
 interface HealthCheckResponse {
   status: "ok" | "error";

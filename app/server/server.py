@@ -17,10 +17,11 @@ from core.data_models import (
     InsightsResponse,
     HealthCheckResponse,
     TableSchema,
-    ColumnInfo
+    ColumnInfo,
+    SuggestQueryResponse
 )
 from core.file_processor import convert_csv_to_sqlite, convert_json_to_sqlite, convert_jsonl_to_sqlite
-from core.llm_processor import generate_sql
+from core.llm_processor import generate_sql, generate_suggested_query
 from core.sql_processor import execute_sql_safely, get_database_schema
 from core.insights import generate_insights
 from core.sql_security import (
@@ -237,6 +238,21 @@ async def health_check() -> HealthCheckResponse:
             tables_count=0,
             uptime_seconds=0
         )
+
+@app.get("/api/suggest-query", response_model=SuggestQueryResponse)
+async def suggest_query() -> SuggestQueryResponse:
+    """Generate an interesting natural language query suggestion based on the current database schema"""
+    try:
+        schema_info = get_database_schema()
+        if not schema_info.get("tables"):
+            return SuggestQueryResponse(query="What are all the records in my table?")
+        suggested = generate_suggested_query(schema_info)
+        return SuggestQueryResponse(query=suggested)
+    except Exception as e:
+        logger.error(f"[ERROR] Suggest query failed: {str(e)}")
+        logger.error(f"[ERROR] Full traceback:\n{traceback.format_exc()}")
+        return SuggestQueryResponse(query="", error=str(e))
+
 
 @app.delete("/api/table/{table_name}")
 async def delete_table(table_name: str):
