@@ -2,6 +2,8 @@ import './style.css'
 import { api } from './api/client'
 
 // Global state
+let currentFavorites: FavoriteItem[] = [];
+let currentQueryText = '';
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeFileUpload();
   initializeModal();
   loadDatabaseSchema();
+  initializeFavorites();
 });
 
 // Query Input Functionality
@@ -117,13 +120,16 @@ async function loadDatabaseSchema() {
 
 // Display query results
 function displayResults(response: QueryResponse, query: string) {
-  
+  // Store current query context for star button
+  currentQueryText = query;
+
   const resultsSection = document.getElementById('results-section') as HTMLElement;
   const sqlDisplay = document.getElementById('sql-display') as HTMLDivElement;
   const resultsContainer = document.getElementById('results-container') as HTMLDivElement;
-  
+  const resultsHeader = resultsSection.querySelector('.results-header') as HTMLElement;
+
   resultsSection.style.display = 'block';
-  
+
   // Display natural language query and SQL
   sqlDisplay.innerHTML = `
     <div class="query-display">
@@ -133,7 +139,7 @@ function displayResults(response: QueryResponse, query: string) {
       <strong>SQL:</strong> <code>${response.sql}</code>
     </div>
   `;
-  
+
   // Display results table
   if (response.error) {
     resultsContainer.innerHTML = `<div class="error-message">${response.error}</div>`;
@@ -144,9 +150,21 @@ function displayResults(response: QueryResponse, query: string) {
     resultsContainer.innerHTML = '';
     resultsContainer.appendChild(table);
   }
-  
-  // Initialize toggle button
+
+  // Inject star button into results header (between h2 and toggle button)
+  const existingStar = document.getElementById('star-button');
+  if (existingStar) existingStar.remove();
+  const starButton = document.createElement('button');
+  starButton.className = 'star-button';
+  starButton.title = 'Save as favorite';
+  starButton.textContent = '☆';
+  starButton.id = 'star-button';
+  updateStarButtonState(starButton, query);
+  starButton.addEventListener('click', () => handleStarClick(starButton, query, response.sql));
   const toggleButton = document.getElementById('toggle-results') as HTMLButtonElement;
+  resultsHeader.insertBefore(starButton, toggleButton);
+
+  // Initialize toggle button
   toggleButton.addEventListener('click', () => {
     resultsContainer.style.display = resultsContainer.style.display === 'none' ? 'block' : 'none';
     toggleButton.textContent = resultsContainer.style.display === 'none' ? 'Show' : 'Hide';
@@ -388,6 +406,133 @@ function getTypeEmoji(type: string): string {
   
   // Default
   return '📊';
+}
+
+// Favorites: initialize panel controls
+function initializeFavorites() {
+  const favoritesButton = document.getElementById('favorites-button') as HTMLButtonElement;
+  const closeFavorites = document.getElementById('close-favorites') as HTMLButtonElement;
+  const favoritesOverlay = document.getElementById('favorites-overlay') as HTMLDivElement;
+
+  favoritesButton.addEventListener('click', () => toggleFavoritesPanel(true));
+  closeFavorites.addEventListener('click', () => toggleFavoritesPanel(false));
+  favoritesOverlay.addEventListener('click', () => toggleFavoritesPanel(false));
+
+  loadFavorites();
+}
+
+function toggleFavoritesPanel(open: boolean) {
+  const panel = document.getElementById('favorites-panel') as HTMLElement;
+  const overlay = document.getElementById('favorites-overlay') as HTMLElement;
+  panel.classList.toggle('open', open);
+  overlay.style.display = open ? 'block' : 'none';
+  if (open) loadFavorites();
+}
+
+async function loadFavorites() {
+  try {
+    const response = await api.getFavorites();
+    currentFavorites = response.favorites ?? [];
+    renderFavoritesList();
+    // Update star button state if it exists
+    const starBtn = document.getElementById('star-button') as HTMLButtonElement | null;
+    if (starBtn && currentQueryText) {
+      updateStarButtonState(starBtn, currentQueryText);
+    }
+  } catch (error) {
+    console.error('Failed to load favorites:', error);
+  }
+}
+
+function renderFavoritesList() {
+  const listEl = document.getElementById('favorites-list') as HTMLDivElement;
+  listEl.innerHTML = '';
+
+  if (currentFavorites.length === 0) {
+    listEl.innerHTML = '<p class="no-favorites">No favorites saved yet. Run a query and click the star to save it.</p>';
+    return;
+  }
+
+  currentFavorites.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'favorite-item';
+
+    const queryEl = document.createElement('div');
+    queryEl.className = 'favorite-item-query';
+    queryEl.textContent = item.query_text;
+
+    const sqlEl = document.createElement('div');
+    sqlEl.className = 'favorite-item-sql';
+    sqlEl.textContent = item.sql_text;
+
+    const footer = document.createElement('div');
+    footer.className = 'favorite-item-footer';
+
+    const dateEl = document.createElement('span');
+    dateEl.className = 'favorite-item-date';
+    dateEl.textContent = new Date(item.created_at).toLocaleDateString();
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-favorite-btn';
+    deleteBtn.textContent = 'Remove';
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleDeleteFavorite(item.id);
+    });
+
+    footer.appendChild(dateEl);
+    footer.appendChild(deleteBtn);
+
+    el.appendChild(queryEl);
+    el.appendChild(sqlEl);
+    el.appendChild(footer);
+
+    el.addEventListener('click', () => rerunFavorite(item.query_text));
+    listEl.appendChild(el);
+  });
+}
+
+function rerunFavorite(queryText: string) {
+  toggleFavoritesPanel(false);
+  const queryInput = document.getElementById('query-input') as HTMLTextAreaElement;
+  queryInput.value = queryText;
+  const queryButton = document.getElementById('query-button') as HTMLButtonElement;
+  queryButton.click();
+}
+
+async function handleDeleteFavorite(id: number) {
+  try {
+    await api.deleteFavorite(id);
+    await loadFavorites();
+  } catch (error) {
+    console.error('Failed to delete favorite:', error);
+  }
+}
+
+function updateStarButtonState(btn: HTMLButtonElement, queryText: string) {
+  const isFavorited = currentFavorites.some(f => f.query_text === queryText);
+  if (isFavorited) {
+    btn.classList.add('starred');
+    btn.textContent = '★';
+  } else {
+    btn.classList.remove('starred');
+    btn.textContent = '☆';
+  }
+}
+
+async function handleStarClick(btn: HTMLButtonElement, queryText: string, sqlText: string) {
+  const existing = currentFavorites.find(f => f.query_text === queryText);
+  if (existing) {
+    await handleDeleteFavorite(existing.id);
+  } else {
+    try {
+      await api.addFavorite({ query_text: queryText, sql_text: sqlText });
+      await loadFavorites();
+    } catch (error) {
+      console.error('Failed to add favorite:', error);
+    }
+  }
+  updateStarButtonState(btn, queryText);
 }
 
 // Load sample data

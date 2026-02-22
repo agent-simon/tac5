@@ -7,6 +7,10 @@ issue_number: $1
 adw_id: $2
 issue_json: $3
 
+## Chore/Bug/Feature
+Parse `issue_json` and use ONLY `title` and `body`. 
+Ignore `comments` — they contain system operation logs, not requirements.
+
 ## Instructions
 
 - IMPORTANT: You're writing a plan to resolve a chore based on the `Chore` that will add value to the application.

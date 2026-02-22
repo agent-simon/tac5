@@ -31,6 +31,7 @@ application_url: $4 if provided, otherwise use http://localhost:5173
 
 - IMPORTANT: Reset the database by running `scripts/reset_db.sh`
 - IMPORTANT: Make sure the server and client are running on a background process before executing the test steps. Read `scripts/` and `README.md` for more information on how to start, stop and reset the server and client
+- Run `npx playwright install chrome --with-deps` if chrome is not already installed
 
 
 ## Screenshot Directory
