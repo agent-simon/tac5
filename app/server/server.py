@@ -12,6 +12,7 @@ from core.data_models import (
     FileUploadResponse,
     QueryRequest,
     QueryResponse,
+    GenerateQueryResponse,
     DatabaseSchemaResponse,
     InsightsRequest,
     InsightsResponse,
@@ -20,7 +21,7 @@ from core.data_models import (
     ColumnInfo
 )
 from core.file_processor import convert_csv_to_sqlite, convert_json_to_sqlite, convert_jsonl_to_sqlite
-from core.llm_processor import generate_sql
+from core.llm_processor import generate_sql, generate_natural_language_query
 from core.sql_processor import execute_sql_safely, get_database_schema
 from core.insights import generate_insights
 from core.sql_security import (
@@ -206,6 +207,23 @@ async def generate_insights_endpoint(request: InsightsRequest) -> InsightsRespon
             generated_at=datetime.now(),
             error=str(e)
         )
+
+@app.post("/api/generate-query", response_model=GenerateQueryResponse)
+async def generate_query_endpoint() -> GenerateQueryResponse:
+    """Generate an interesting natural language query based on current database schema"""
+    try:
+        schema_info = get_database_schema()
+        if not schema_info.get('tables'):
+            return GenerateQueryResponse(query="", error="No tables found. Please upload data first.")
+        result = generate_natural_language_query(schema_info)
+        if not result:
+            return GenerateQueryResponse(query="", error="LLM returned an empty response. Please try again.")
+        logger.info(f"[SUCCESS] Generated query: {result}")
+        return GenerateQueryResponse(query=result)
+    except Exception as e:
+        logger.error(f"[ERROR] Generate query failed: {str(e)}")
+        return GenerateQueryResponse(query="", error=str(e))
+
 
 @app.get("/api/health", response_model=HealthCheckResponse)
 async def health_check() -> HealthCheckResponse:
