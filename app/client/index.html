@@ -21,6 +21,7 @@
           ></textarea>
           <div class="query-controls">
             <button id="query-button" class="primary-button">Query</button>
+            <button id="favorites-button" class="secondary-button favorites-header-btn">&#9734; Favorites</button>
             <button id="upload-data-button" class="secondary-button">Upload Data</button>
             <button id="generate-query-button" class="secondary-button">Generate Query</button>
           </div>
@@ -94,6 +95,17 @@
         </div>
       </div>
     </div>
+    <!-- Favorites Side Panel -->
+    <div id="favorites-panel" class="favorites-panel">
+      <div class="favorites-panel-header">
+        <h3>Saved Favorites</h3>
+        <button id="close-favorites" class="close-favorites-btn">&times;</button>
+      </div>
+      <div id="favorites-list" class="favorites-list">
+        <p class="no-favorites">No favorites saved yet. Run a query and click the star to save it.</p>
+      </div>
+    </div>
+    <div id="favorites-overlay" class="favorites-overlay" style="display: none;"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

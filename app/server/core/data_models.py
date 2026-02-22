@@ -84,3 +84,28 @@ class HealthCheckResponse(BaseModel):
     tables_count: int
     version: str = "1.0.0"
     uptime_seconds: float
+
+# Favorites Models
+class FavoriteItem(BaseModel):
+    id: int
+    query_text: str
+    sql_text: str
+    created_at: str
+
+class FavoriteListResponse(BaseModel):
+    favorites: List[FavoriteItem]
+    total: int
+    error: Optional[str] = None
+
+class AddFavoriteRequest(BaseModel):
+    query_text: str
+    sql_text: str
+
+class AddFavoriteResponse(BaseModel):
+    favorite: Optional[FavoriteItem] = None
+    already_exists: bool = False
+    error: Optional[str] = None
+
+class DeleteFavoriteResponse(BaseModel):
+    deleted: bool
+    error: Optional[str] = None

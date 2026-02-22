@@ -86,5 +86,24 @@ export const api = {
   // Health check
   async healthCheck(): Promise<HealthCheckResponse> {
     return apiRequest<HealthCheckResponse>('/health');
+  },
+
+  // Favorites
+  async getFavorites(): Promise<FavoriteListResponse> {
+    return apiRequest<FavoriteListResponse>('/favorites');
+  },
+
+  async addFavorite(request: AddFavoriteRequest): Promise<AddFavoriteResponse> {
+    return apiRequest<AddFavoriteResponse>('/favorites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
+  },
+
+  async deleteFavorite(favoriteId: number): Promise<DeleteFavoriteResponse> {
+    return apiRequest<DeleteFavoriteResponse>(`/favorites/${favoriteId}`, {
+      method: 'DELETE'
+    });
   }
 };

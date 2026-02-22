@@ -18,10 +18,16 @@ from core.data_models import (
     InsightsResponse,
     HealthCheckResponse,
     TableSchema,
-    ColumnInfo
+    ColumnInfo,
+    FavoriteListResponse,
+    AddFavoriteRequest,
+    AddFavoriteResponse,
+    DeleteFavoriteResponse,
+    FavoriteItem
 )
 from core.file_processor import convert_csv_to_sqlite, convert_json_to_sqlite, convert_jsonl_to_sqlite
-from core.llm_processor import generate_sql, generate_natural_language_query
+from core.favorites import get_all_favorites, add_favorite, delete_favorite, favorite_exists
+from core.llm_processor import generate_sql
 from core.sql_processor import execute_sql_safely, get_database_schema
 from core.insights import generate_insights
 from core.sql_security import (
@@ -292,6 +298,51 @@ async def delete_table(table_name: str):
         logger.error(f"[ERROR] Table deletion failed: {str(e)}")
         logger.error(f"[ERROR] Full traceback:\n{traceback.format_exc()}")
         raise HTTPException(500, f"Error deleting table: {str(e)}")
+
+@app.get("/api/favorites", response_model=FavoriteListResponse)
+async def list_favorites() -> FavoriteListResponse:
+    """Return all saved query favorites ordered by creation date descending"""
+    try:
+        rows = get_all_favorites()
+        response = FavoriteListResponse(
+            favorites=[FavoriteItem(**r) for r in rows],
+            total=len(rows)
+        )
+        logger.info(f"[SUCCESS] Favorites listed: {len(rows)} items")
+        return response
+    except Exception as e:
+        logger.error(f"[ERROR] Favorites list failed: {str(e)}")
+        return FavoriteListResponse(favorites=[], total=0, error=str(e))
+
+
+@app.post("/api/favorites", response_model=AddFavoriteResponse)
+async def create_favorite(request: AddFavoriteRequest) -> AddFavoriteResponse:
+    """Save a query as a favorite"""
+    try:
+        if favorite_exists(request.query_text):
+            logger.info(f"[SUCCESS] Favorite already exists for query: {request.query_text!r}")
+            return AddFavoriteResponse(already_exists=True)
+        row = add_favorite(request.query_text, request.sql_text)
+        response = AddFavoriteResponse(favorite=FavoriteItem(**row), already_exists=False)
+        logger.info(f"[SUCCESS] Favorite added: id={row['id']}, query={request.query_text!r}")
+        return response
+    except Exception as e:
+        logger.error(f"[ERROR] Add favorite failed: {str(e)}")
+        return AddFavoriteResponse(error=str(e))
+
+
+@app.delete("/api/favorites/{favorite_id}", response_model=DeleteFavoriteResponse)
+async def remove_favorite(favorite_id: int) -> DeleteFavoriteResponse:
+    """Delete a saved favorite by id"""
+    try:
+        result = delete_favorite(favorite_id)
+        response = DeleteFavoriteResponse(deleted=result)
+        logger.info(f"[SUCCESS] Favorite deleted: id={favorite_id}, found={result}")
+        return response
+    except Exception as e:
+        logger.error(f"[ERROR] Delete favorite failed: {str(e)}")
+        return DeleteFavoriteResponse(deleted=False, error=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
