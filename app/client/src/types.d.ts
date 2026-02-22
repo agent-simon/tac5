@@ -78,3 +78,33 @@ interface HealthCheckResponse {
   version: string;
   uptime_seconds: number;
 }
+
+// Favorites Types
+interface FavoriteItem {
+  id: number;
+  query_text: string;
+  sql_text: string;
+  created_at: string;
+}
+
+interface FavoriteListResponse {
+  favorites: FavoriteItem[];
+  total: number;
+  error?: string;
+}
+
+interface AddFavoriteRequest {
+  query_text: string;
+  sql_text: string;
+}
+
+interface AddFavoriteResponse {
+  favorite?: FavoriteItem;
+  already_exists: boolean;
+  error?: string;
+}
+
+interface DeleteFavoriteResponse {
+  deleted: boolean;
+  error?: string;
+}
