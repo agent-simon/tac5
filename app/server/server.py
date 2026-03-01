@@ -1,6 +1,9 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from datetime import datetime
+import csv
+import io
 import os
 import sqlite3
 import traceback
@@ -298,6 +301,55 @@ async def delete_table(table_name: str):
         logger.error(f"[ERROR] Table deletion failed: {str(e)}")
         logger.error(f"[ERROR] Full traceback:\n{traceback.format_exc()}")
         raise HTTPException(500, f"Error deleting table: {str(e)}")
+
+@app.get("/api/table/{table_name}/download")
+async def download_table_as_csv(table_name: str):
+    """Download a table as a CSV file"""
+    try:
+        # Validate table name using security module
+        try:
+            validate_identifier(table_name, "table")
+        except SQLSecurityError as e:
+            raise HTTPException(400, str(e))
+
+        conn = sqlite3.connect("db/database.db")
+
+        # Check if table exists using secure method
+        if not check_table_exists(conn, table_name):
+            conn.close()
+            raise HTTPException(404, f"Table '{table_name}' not found")
+
+        # Fetch all rows safely
+        cursor = execute_query_safely(
+            conn,
+            "SELECT * FROM {table}",
+            identifier_params={'table': table_name}
+        )
+        rows = cursor.fetchall()
+        column_names = [description[0] for description in cursor.description] if cursor.description else []
+        conn.close()
+
+        # Generate CSV in-memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(column_names)
+        for row in rows:
+            writer.writerow(list(row))
+        output.seek(0)
+
+        logger.info(f"[SUCCESS] CSV download: table={table_name}, rows={len(rows)}")
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={table_name}.csv"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[ERROR] CSV download failed: {str(e)}")
+        logger.error(f"[ERROR] Full traceback:\n{traceback.format_exc()}")
+        raise HTTPException(500, f"Error downloading table: {str(e)}")
+
 
 @app.get("/api/favorites", response_model=FavoriteListResponse)
 async def list_favorites() -> FavoriteListResponse:

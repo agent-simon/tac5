@@ -239,13 +239,20 @@ function displayTables(tables: TableSchema[]) {
     tableLeft.appendChild(tableName);
     tableLeft.appendChild(tableInfo);
     
+    const downloadButton = document.createElement('button');
+    downloadButton.className = 'download-table-button';
+    downloadButton.innerHTML = '&#8675;';
+    downloadButton.title = 'Download as CSV';
+    downloadButton.onclick = () => downloadTable(table.name);
+
     const removeButton = document.createElement('button');
     removeButton.className = 'remove-table-button';
     removeButton.innerHTML = '&times;';
     removeButton.title = 'Remove table';
     removeButton.onclick = () => removeTable(table.name);
-    
+
     tableHeader.appendChild(tableLeft);
+    tableHeader.appendChild(downloadButton);
     tableHeader.appendChild(removeButton);
     
     // Columns section
@@ -376,6 +383,16 @@ function initializeGenerateQueryButton() {
       generateQueryButton.textContent = 'Generate Query';
     }
   });
+}
+
+// Download table as CSV
+function downloadTable(tableName: string) {
+  const link = document.createElement('a');
+  link.href = `/api/table/${encodeURIComponent(tableName)}/download`;
+  link.download = `${tableName}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 // Remove table

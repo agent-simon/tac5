@@ -57,3 +57,12 @@ claude-max-output.jsonl
 storage.json
 
 deep_specs/
+
+# Screenshots
+screenshots/
+*.png
+*.jpg
+*.jpeg
+
+# Playwright
+.playwright-mcp/

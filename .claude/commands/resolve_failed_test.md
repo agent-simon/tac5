@@ -25,9 +25,15 @@ Fix a specific failing test using the provided failure details.
    - Do not modify unrelated code or tests
 
 5. **Validate the Fix**
-   - Re-run the same `execution_command` to confirm the test now passes
-   - Do NOT run other tests or the full test suite
-   - Focus only on fixing this specific test
+   - Re-run the `execution_command` to confirm this test passes
+   - Then run the full test suite: `cd app/server && uv run pytest -v --tb=short`
+   - If your fix causes other tests to fail, fix those too before finishing
+   - Do not report success unless both the specific test and the full suite pass
+
+6. **Fix Philosophy**
+   - If application code is wrong: fix application code
+   - If the test assertion is wrong: fix it but add a comment explaining why
+   - Never weaken an assertion (e.g., `assert x == True` → `assert x`) as a shortcut
 
 ## Test Failure Input
 
