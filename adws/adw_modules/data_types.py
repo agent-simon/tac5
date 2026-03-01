@@ -36,6 +36,9 @@ SlashCommand = Literal[
     "/resolve_failed_test",
     "/test_e2e",
     "/resolve_failed_e2e_test",
+    # Playwright test generation commands
+    "/pw_coverage_gap",
+    "/pw_generate_e2e_test",
 ]
 
 
