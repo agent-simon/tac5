@@ -251,9 +251,14 @@ function displayTables(tables: TableSchema[]) {
     removeButton.title = 'Remove table';
     removeButton.onclick = () => removeTable(table.name);
 
+    const buttonGroup = document.createElement('div');
+    buttonGroup.style.display = 'flex';
+    buttonGroup.style.alignItems = 'center';
+    buttonGroup.appendChild(downloadButton);
+    buttonGroup.appendChild(removeButton);
+
     tableHeader.appendChild(tableLeft);
-    tableHeader.appendChild(downloadButton);
-    tableHeader.appendChild(removeButton);
+    tableHeader.appendChild(buttonGroup);
     
     // Columns section
     const tableColumns = document.createElement('div');
